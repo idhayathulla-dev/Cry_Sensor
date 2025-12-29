@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrySense - Understand Your Baby's Cry with AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: #0f172a;
+        }
+
+        .bg-muted {
+            background-color: #f8fafc;
+        }
+
+        .bg-background {
+            background-color: #ffffff;
+        }
+
+        .text-muted-foreground {
+            color: #64748b;
+        }
+
+        .border-b {
+            border-bottom-width: 1px;
+            border-color: #e2e8f0;
+        }
+
+        .border {
+            border-width: 1px;
+            border-color: #e2e8f0;
+        }
+
+        .backdrop-blur {
+            backdrop-filter: blur(8px);
+        }
+
+        .bg-background\/70 {
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+
+        .tracking-tight {
+            letter-spacing: -0.025em;
+        }
+
+        .font-extrabold {
+            font-weight: 800;
+        }
+
+        .rounded-2xl {
+            border-radius: 1rem;
+        }
+
+        .rounded-3xl {
+            border-radius: 1.5rem;
+        }
+
+        .shadow-sm {
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+
+        [data-state='active'] {
+            background-color: #0f172a;
+            color: #ffffff;
+        }
+
+        .modal-overlay,
+        .chatbot-overlay {
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .modal-content,
+        .chatbot-container {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Animations */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s cubic-bezier(0.390, 0.575, 0.565, 1.000), transform 0.6s cubic-bezier(0.390, 0.575, 0.565, 1.000);
+            transition-delay: var(--delay, 0s);
+        }
+
+        .is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card-hover-effect {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card-hover-effect:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        .mic-animation i {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        /* Chatbot Styles */
+        #chatbot-toggle {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 100;
+        }
+
+        #chatbot-container {
+            position: fixed;
+            bottom: 6rem;
+            right: 2rem;
+            width: 90%;
+            max-width: 400px;
+            height: 70vh;
+            max-height: 500px;
+            z-index: 100;
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #chatbot-container.active {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .chat-message {
+            animation: slide-in 0.3s ease-out;
+        }
+
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .typing-indicator span {
+            animation: blink 1.4s infinite both;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0% {
+                opacity: 0.2;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.2;
+            }
+        }
+
+        /* Spinner for loading states */
+        .loader {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-background text-foreground">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 backdrop-blur bg-background/70 border-b">
+        <div class="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
+            <a href="#" data-page="home" class="nav-link flex items-center gap-2">
+                <i data-lucide="baby" class="w-6 h-6"></i>
+                <span class="font-bold tracking-tight">CrySense</span>
+                <span class="ml-2 text-xs font-medium border rounded-full px-2 py-0.5">beta</span>
+            </a>
+            <nav class="hidden md:flex items-center gap-6 text-sm">
+                <a href="#" data-page="features" class="nav-link hover:underline">Features</a>
+                <a href="#" data-page="how" class="nav-link hover:underline">How it works</a>
+                <a href="#" data-page="screens" class="nav-link hover:underline">Pediatrician Advice</a>
+                <a href="#" data-page="research" class="nav-link hover:underline">Research</a>
+                <a href="#" data-page="faq" class="nav-link hover:underline">FAQ</a>
+            </nav>
+            <div id="auth-container" class="flex items-center gap-2">
+                <div id="guest-view">
+                    <button data-page="signin"
+                        class="nav-link hidden sm:inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 gap-2 hover:bg-gray-100">
+                        <i data-lucide="log-in" class="w-4 h-4"></i>Sign in
+                    </button>
+                    <button data-page="signup"
+                        class="nav-link inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 gap-2 bg-slate-900 text-white hover:bg-slate-800">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>Create account
+                    </button>
+                </div>
+                <div id="user-view" class="hidden items-center gap-2">
+                    <button data-page="parent-app"
+                        class="nav-link hidden sm:inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 gap-2 bg-slate-900 text-white hover:bg-slate-800">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>Parent App
+                    </button>
+                    <button id="sign-out-btn"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 gap-2 hover:bg-gray-100">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>Sign Out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Home Page -->
+        <div id="page-home" class="page active">
+            <section class="relative overflow-hidden">
+                <div class="absolute top-0 left-0 -translate-x-1/3 -translate-y-1/2" style="z-index: -1;">
+                    <svg width="900" height="900" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="400" cy="400" r="400" fill="url(#paint0_radial_1_2)" />
+                        <defs>
+                            <radialGradient id="paint0_radial_1_2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
+                                gradientTransform="translate(400 400) rotate(90) scale(400)">
+                                <stop stop-color="#f1f5f9" />
+                                <stop offset="1" stop-color="white" stop-opacity="0" />
+                            </radialGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-8 px-4 py-14">
+                    <div class="flex flex-col justify-center">
+                        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight fade-in-up">Understand your baby's
+                            cry with AI</h1>
+                        <p class="mt-4 text-muted-foreground fade-in-up" style="--delay: 0.1s;">Record a 10s clip. Get
+                            instant, privacy-first insights: hunger, sleepiness, discomfort, or pain — with clear next
+                            steps.</p>
+                        <div class="mt-8 flex flex-wrap gap-3 fade-in-up" style="--delay: 0.2s;">
+                            <button id="open-demo-modal"
+                                class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-base font-semibold h-12 px-8 py-3 gap-3 bg-slate-900 text-white hover:bg-slate-800 transition-transform transform hover:scale-105 shadow-lg hover:shadow-xl"><i
+                                    data-lucide="mic" class="w-5 h-5"></i> Try Live Demo</button>
+                        </div>
+                    </div>
+                    <div class="bg-muted rounded-3xl p-4 md:p-6 shadow-sm border fade-in-up" style="--delay: 0.2s;">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full items-center justify-center bg-gray-200">
+                                        <span class="font-medium text-gray-600">CN</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium">Baby Aarav</div>
+                                        <div class="text-xs text-muted-foreground">4 months</div>
+                                    </div>
+                                </div>
+                                <span
+                                    class="text-xs font-medium border rounded-full px-2.5 py-1 bg-green-100 text-green-800">Live</span>
+                            </div>
+                            <div class="rounded-2xl border bg-background shadow-sm">
+                                <div class="p-4 pb-2">
+                                    <h3 class="text-base font-semibold leading-none tracking-tight">Latest Analysis</h3>
+                                    <p class="text-sm text-muted-foreground">10s sample • Aug 17, 2025 07:03 PM</p>
+                                </div>
+                                <div class="p-4 pt-0 space-y-4">
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="p-3 rounded-2xl border bg-background">
+                                            <div class="text-xs text-muted-foreground">Hunger</div>
+                                            <div class="text-2xl font-bold mt-1">62%</div>
+                                            <div
+                                                class="relative h-2 mt-2 w-full overflow-hidden rounded-full bg-gray-200">
+                                                <div class="h-full w-full flex-1 bg-slate-900 transition-all"
+                                                    style="transform: translateX(-38%);"></div>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 rounded-2xl border bg-background">
+                                            <div class="text-xs text-muted-foreground">Sleepy</div>
+                                            <div class="text-2xl font-bold mt-1">18%</div>
+                                            <div
+                                                class="relative h-2 mt-2 w-full overflow-hidden rounded-full bg-gray-200">
+                                                <div class="h-full w-full flex-1 bg-slate-900 transition-all"
+                                                    style="transform: translateX(-82%);"></div>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 rounded-2xl border bg-background">
+                                            <div class="text-xs text-muted-foreground">Discomfort</div>
+                                            <div class="text-2xl font-bold mt-1">12%</div>
+                                            <div
+                                                class="relative h-2 mt-2 w-full overflow-hidden rounded-full bg-gray-200">
+                                                <div class="h-full w-full flex-1 bg-slate-900 transition-all"
+                                                    style="transform: translateX(-88%);"></div>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 rounded-2xl border bg-background">
+                                            <div class="text-xs text-muted-foreground">Pain</div>
+                                            <div class="text-2xl font-bold mt-1">8%</div>
+                                            <div
+                                                class="relative h-2 mt-2 w-full overflow-hidden rounded-full bg-gray-200">
+                                                <div class="h-full w-full flex-1 bg-slate-900 transition-all"
+                                                    style="transform: translateX(-92%);"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 rounded-2xl border bg-background">
+                                        <div class="text-xs text-muted-foreground">Suggested action</div>
+                                        <div class="mt-1 text-sm">Likely <span class="font-semibold">hunger</span>. Last
+                                            feed 2h ago. Offer breast/bottle now.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Other static pages (Features, How, Screens, FAQ) remain the same -->
+        <div id="page-features" class="page">
+            <section class="py-14">
+                <div class="max-w-6xl mx-auto px-4">
+                    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-center fade-in-up">Designed for calm,
+                        built for care</h2>
+                    <p class="text-muted-foreground text-center mt-2 max-w-2xl mx-auto fade-in-up"
+                        style="--delay: 0.1s;">CrySense offers a suite of powerful tools to help you understand and
+                        respond to your baby's needs with confidence.</p>
+                    <div class="grid md:grid-cols-2 gap-6 mt-10">
+                        <div class="rounded-2xl border bg-background shadow-sm p-6 fade-in-up card-hover-effect"
+                            style="--delay: 0.2s;">
+                            <div class="flex items-start gap-4">
+                                <div class="p-3 rounded-2xl bg-muted"><i data-lucide="mic" class="w-6 h-6"></i></div>
+                                <div>
+                                    <h3 class="text-xl font-semibold leading-tight">AI Cry Interpreter</h3>
+                                    <p class="text-muted-foreground mt-1">Our core feature. The AI model, trained on
+                                        thousands of hours of audio, analyzes the acoustic features of your baby's cry
+                                        to identify their most likely need: hunger, pain, sleepiness, or discomfort,
+                                        complete with confidence scores for clarity.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border bg-background shadow-sm p-6 fade-in-up card-hover-effect"
+                            style="--delay: 0.3s;">
+                            <div class="flex items-start gap-4">
+                                <div class="p-3 rounded-2xl bg-muted"><i data-lucide="database" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold leading-tight">Persistent Cry & Activity History
+                                    </h3>
+                                    <p class="text-muted-foreground mt-1">Every analysis and daily activity is securely
+                                        saved to your private account. Track patterns over time, review past events, and
+                                        share accurate data with your pediatrician, all stored securely with Firestore.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border bg-background shadow-sm p-6 fade-in-up card-hover-effect"
+                            style="--delay: 0.4s;">
+                            <div class="flex items-start gap-4">
+                                <div class="p-3 rounded-2xl bg-muted"><i data-lucide="brain-circuit"
+                                        class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold leading-tight">Dynamic AI Suggestions
+                                    </h3>
+                                    <p class="text-muted-foreground mt-1">Our live demo doesn't just show static
+                                        results. It uses the Gemini API in real-time to generate a unique and relevant
+                                        "suggested action" based on the randomized cry analysis, providing a glimpse
+                                        into the power of generative AI.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border bg-background shadow-sm p-6 fade-in-up card-hover-effect"
+                            style="--delay: 0.5s;">
+                            <div class="flex items-start gap-4">
+                                <div class="p-3 rounded-2xl bg-muted"><i data-lucide="shield" class="w-6 h-6"></i></div>
+                                <div>
+                                    <h3 class="text-xl font-semibold leading-tight">Privacy-First Architecture</h3>
+                                    <p class="text-muted-foreground mt-1">Your family's privacy is paramount. CrySense
+                                        offers both on-device processing for maximum privacy and an encrypted cloud
+                                        option. You have full control over your data, including one-tap deletion.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <div id="page-how" class="page">
+            <section class="py-14">
+                <div class="max-w-6xl mx-auto px-4">
+                    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-center fade-in-up">Simple Steps to
+                        Understanding</h2>
+                    <p class="text-muted-foreground text-center mt-2 max-w-2xl mx-auto fade-in-up"
+                        style="--delay: 0.1s;">We've designed CrySense to be intuitive and easy to use, even when you're
+                        sleep-deprived.</p>
+                    <div class="grid md:grid-cols-4 gap-4 mt-10">
+                        <div class="rounded-2xl border bg-background shadow-sm p-6 text-center fade-in-up card-hover-effect"
+                            style="--delay: 0.2s;">
+                            <div class="inline-flex p-3 rounded-2xl bg-muted"><i data-lucide="mic" class="w-8 h-8"></i>
+                            </div>
+                            <div class="font-bold text-lg mt-2">Step 1: Record</div>
+                            <p class="text-sm text-muted-foreground mt-1">When your baby is crying, open the app and
+                                capture a 10-second audio clip. Try to minimize background noise for the best results.
+                            </p>
+                        </div>
+                        <div class="rounded-2xl border bg-background shadow-sm p-6 text-center fade-in-up card-hover-effect"
+                            style="--delay: 0.3s;">
+                            <div class="inline-flex p-3 rounded-2xl bg-muted"><i data-lucide="brain"
+                                    class="w-8 h-8"></i></div>
+                            <div class="font-bold text-lg mt-2">Step 2: Analyze</div>
+                            <p class="text-sm text-muted-foreground mt-1">Our AI gets to work, processing the audio's
+                                unique features like pitch, frequency, and energy using a sophisticated CNN+LSTM model.
+                            </p>
+                        </div>
+                        <div class="rounded-2xl border bg-background shadow-sm p-6 text-center fade-in-up card-hover-effect"
+                            style="--delay: 0.4s;">
+                            <div class="inline-flex p-3 rounded-2xl bg-muted"><i data-lucide="activity"
+                                    class="w-8 h-8"></i></div>
+                            <div class="font-bold text-lg mt-2">Step 3: Understand</div>
+                            <p class="text-sm text-muted-foreground mt-1">Within seconds, you'll see a breakdown of the
+                                likely reasons for the cry, along with a clear, actionable suggestion to help you
+                                respond effectively.</p>
+                        </div>
+                        <div class="rounded-2xl border bg-background shadow-sm p-6 text-center fade-in-up card-hover-effect"
+                            style="--delay: 0.5s;">
+                            <div class="inline-flex p-3 rounded-2xl bg-muted"><i data-lucide="database"
+                                    class="w-8 h-8"></i></div>
+                            <div class="font-bold text-lg mt-2">Step 4: Track</div>
+                            <p class="text-sm text-muted-foreground mt-1">Each analysis is automatically saved to your
+                                dashboard. Review trends, see patterns over weeks, and gain deeper insights into your
+                                baby's communication.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <div id="page-screens" class="page">
+            <section class="py-14 bg-slate-50">
+                <div class="max-w-6xl mx-auto px-4">
+                    <div class="text-center">
+                        <h2 class="text-3xl md:text-4xl font-bold tracking-tight fade-in-up">Professional Pediatrician
+                            Advice</h2>
+                        <p class="text-muted-foreground text-center mt-2 max-w-3xl mx-auto fade-in-up"
+                            style="--delay: 0.1s;">
+                            Connect with board-certified pediatricians who can review your CrySense data to provide
+                            expert, data-informed guidance. All consultations are secure, private, and designed for your
+                            peace of mind.
+                        </p>
+                        <div class="mt-4 p-3 rounded-2xl bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm max-w-3xl mx-auto fade-in-up"
+                            style="--delay: 0.2s;">
+                            <i data-lucide="alert-triangle" class="inline-block w-4 h-4 mr-1"></i>
+                            <strong>Disclaimer:</strong> This service is for non-emergency consultations only. If you
+                            believe you have a medical emergency, please call your local emergency number immediately.
+                        </div>
+                    </div>
+
+                    <div class="mt-12 grid lg:grid-cols-3 gap-8">
+                        <!-- Left Column: Doctor Selection & Consultation -->
+                        <div class="lg:col-span-2 space-y-8">
+                            <div class="fade-in-up" style="--delay: 0.3s;">
+                                <h3 class="text-xl font-semibold tracking-tight">1. Select an Available Pediatrician
+                                </h3>
+                                <div class="mt-4 grid sm:grid-cols-2 gap-4">
+                                    <!-- Doctor Card 1 -->
+                                    <div
+                                        class="rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                                        <div class="flex items-center gap-4">
+                                            <img src="https://placehold.co/64x64/e0f2fe/0ea5e9?text=EC"
+                                                class="w-16 h-16 rounded-full" alt="Dr. Emily Carter">
+                                            <div>
+                                                <h4 class="font-semibold">Dr. Emily Carter</h4>
+                                                <p class="text-sm text-muted-foreground">General Pediatrics</p>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3 flex items-center gap-2 text-sm text-green-600">
+                                            <i data-lucide="circle" class="w-3 h-3 fill-current"></i>
+                                            <span>Available Now</span>
+                                        </div>
+                                    </div>
+                                    <!-- Doctor Card 2 -->
+                                    <div
+                                        class="rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer opacity-60">
+                                        <div class="flex items-center gap-4">
+                                            <img src="https://placehold.co/64x64/f3e8ff/9333ea?text=RJ"
+                                                class="w-16 h-16 rounded-full" alt="Dr. Raj Patel">
+                                            <div>
+                                                <h4 class="font-semibold">Dr. Raj Patel</h4>
+                                                <p class="text-sm text-muted-foreground">Infant Development</p>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3 flex items-center gap-2 text-sm text-gray-500">
+                                            <i data-lucide="circle" class="w-3 h-3"></i>
+                                            <span>Available in 2 hours</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="fade-in-up" style="--delay: 0.4s;">
+                                <h3 class="text-xl font-semibold tracking-tight">2. Describe Your Concern</h3>
+                                <div class="mt-4 rounded-2xl border bg-white shadow-sm p-6">
+                                    <p class="text-sm text-muted-foreground mb-3">Your message will be sent securely to
+                                        Dr. Emily Carter. Your CrySense history from the last 7 days will be
+                                        automatically attached for review.</p>
+                                    <textarea
+                                        placeholder="e.g., 'My baby has been crying more frequently in the evenings. The app suggests it might be discomfort. What should I look out for?'"
+                                        class="w-full h-36 p-3 border rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-slate-300 outline-none transition"></textarea>
+                                    <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                                        <button
+                                            class="w-full sm:w-auto inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 gap-2 bg-slate-900 text-white hover:bg-slate-800 transition-colors">
+                                            <i data-lucide="send" class="w-4 h-4"></i> Send Secure Message
+                                        </button>
+                                        <button
+                                            class="w-full sm:w-auto inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 gap-2 bg-white text-slate-800 border hover:bg-slate-50 transition-colors">
+                                            <i data-lucide="video" class="w-4 h-4"></i> Schedule Video Call
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: How It Works & Benefits -->
+                        <div class="space-y-8">
+                            <div class="fade-in-up" style="--delay: 0.5s;">
+                                <h3 class="text-xl font-semibold tracking-tight">How It Works</h3>
+                                <ul class="mt-4 space-y-4">
+                                    <li class="flex items-start gap-3">
+                                        <div
+                                            class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold">
+                                            1</div>
+                                        <div>
+                                            <h4 class="font-medium">Choose a Pediatrician</h4>
+                                            <p class="text-sm text-muted-foreground">Select from our list of available,
+                                                board-certified professionals.</p>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <div
+                                            class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold">
+                                            2</div>
+                                        <div>
+                                            <h4 class="font-medium">Share Data Securely</h4>
+                                            <p class="text-sm text-muted-foreground">Your recent CrySense data is
+                                                automatically and privately shared for context.</p>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <div
+                                            class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold">
+                                            3</div>
+                                        <div>
+                                            <h4 class="font-medium">Receive Expert Advice</h4>
+                                            <p class="text-sm text-muted-foreground">Get a response via secure message
+                                                or schedule a virtual consultation.</p>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="p-5 rounded-2xl border bg-white shadow-sm fade-in-up" style="--delay: 0.6s;">
+                                <div class="flex items-start gap-4">
+                                    <div class="p-3 rounded-2xl bg-muted"><i data-lucide="shield-check"
+                                            class="w-8 h-8 text-slate-600"></i></div>
+                                    <div>
+                                        <h4 class="font-semibold">HIPAA-Compliant</h4>
+                                        <p class="text-sm text-muted-foreground">Your privacy is protected by the
+                                            highest standards of data security.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div id="page-research" class="page">
+            <section class="py-14">
+                <div class="max-w-4xl mx-auto px-4">
+                    <div class="text-center">
+                        <h2 class="text-3xl md:text-4xl font-bold tracking-tight fade-in-up">The Science Behind CrySense
+                        </h2>
+                        <p class="text-muted-foreground text-center mt-2 max-w-2xl mx-auto fade-in-up"
+                            style="--delay: 0.1s;">
+                            Our technology is built upon decades of research into infant cry acoustics and the latest
+                            advancements in machine learning. Explore some of the foundational work and recent
+                            discussions below.
+                        </p>
+                    </div>
+
+                    <div class="mt-12 space-y-10">
+                        <!-- Research Papers Section -->
+                        <div>
+                            <h3 class="text-2xl font-semibold tracking-tight fade-in-up" style="--delay: 0.2s;">
+                                Peer-Reviewed Research</h3>
+                            <div class="mt-4 space-y-4">
+                                <div class="p-5 rounded-2xl border bg-background shadow-sm card-hover-effect fade-in-up"
+                                    style="--delay: 0.3s;">
+                                    <h4 class="font-semibold">Acoustic Analysis of the Normal Infant Cry: Non-invasive
+                                        Assessment of Laryngeal Function</h4>
+                                    <p class="text-sm text-muted-foreground mt-1">Source: <span
+                                            class="font-medium">Journal of Voice</span></p>
+                                    <p class="text-sm text-muted-foreground mt-2">This foundational paper explores how
+                                        the physical properties of a baby's cry, such as pitch and energy, directly
+                                        relate to their physiological state.</p>
+                                    <a href="#"
+                                        class="text-sm font-semibold text-slate-700 hover:text-slate-900 mt-3 inline-flex items-center gap-1">Read
+                                        Paper <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+                                </div>
+                                <div class="p-5 rounded-2xl border bg-background shadow-sm card-hover-effect fade-in-up"
+                                    style="--delay: 0.4s;">
+                                    <h4 class="font-semibold">Machine Learning for Infant Cry Classification: A
+                                        Systematic Review</h4>
+                                    <p class="text-sm text-muted-foreground mt-1">Source: <span class="font-medium">IEEE
+                                            Access</span></p>
+                                    <p class="text-sm text-muted-foreground mt-2">A comprehensive review of various AI
+                                        models used to classify infant cries, highlighting the effectiveness of deep
+                                        learning approaches for accuracy.</p>
+                                    <a href="#"
+                                        class="text-sm font-semibold text-slate-700 hover:text-slate-900 mt-3 inline-flex items-center gap-1">Read
+                                        Review <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- In the News Section -->
+                        <div>
+                            <h3 class="text-2xl font-semibold tracking-tight fade-in-up" style="--delay: 0.5s;">In the
+                                News</h3>
+                            <div class="mt-4 grid md:grid-cols-2 gap-6">
+                                <div class="p-5 rounded-2xl border bg-background shadow-sm card-hover-effect fade-in-up"
+                                    style="--delay: 0.6s;">
+                                    <h4 class="font-semibold">AI Helps Parents Interpret Their Baby's Cries</h4>
+                                    <p class="text-sm text-muted-foreground mt-1">Source: <span class="font-medium">The
+                                            Guardian</span></p>
+                                    <p class="text-sm text-muted-foreground mt-2">An overview of how new technologies
+                                        are empowering parents by providing data-driven insights into their infant's
+                                        needs.</p>
+                                    <a href="#"
+                                        class="text-sm font-semibold text-slate-700 hover:text-slate-900 mt-3 inline-flex items-center gap-1">Read
+                                        Article <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+                                </div>
+                                <div class="p-5 rounded-2xl border bg-background shadow-sm card-hover-effect fade-in-up"
+                                    style="--delay: 0.7s;">
+                                    <h4 class="font-semibold">The Future of Parenting is Here, and It's Powered by AI
+                                    </h4>
+                                    <p class="text-sm text-muted-foreground mt-1">Source: <span
+                                            class="font-medium">Wired Magazine</span></p>
+                                    <p class="text-sm text-muted-foreground mt-2">Discusses the ethical considerations
+                                        and potential benefits of using artificial intelligence in early childcare and
+                                        development.</p>
+                                    <a href="#"
+                                        class="text-sm font-semibold text-slate-700 hover:text-slate-900 mt-3 inline-flex items-center gap-1">Read
+                                        Article <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div id="page-faq" class="page">
+            <section class="py-14">
+                <div class="max-w-3xl mx-auto px-4">
+                    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-center fade-in-up">Frequently Asked
+                        Questions</h2>
+                    <div class="space-y-6 mt-8">
+                        <div class="fade-in-up" style="--delay: 0.1s;">
+                            <h3 class="font-semibold text-lg">Is the AI analysis accurate?</h3>
+                            <p class="text-muted-foreground mt-1">Our model is highly accurate and improves over time
+                                with user feedback. While it provides a strong indication of your baby's needs, it
+                                should be used as a supportive tool alongside your parental intuition. It is not a
+                                medical device.</p>
+                        </div>
+                        <div class="fade-in-up" style="--delay: 0.2s;">
+                            <h3 class="font-semibold text-lg">Is my data safe and private?</h3>
+                            <p class="text-muted-foreground mt-1">Absolutely. We use Firebase Firestore with strict
+                                security rules, meaning your cry analysis data is private to your account. All data is
+                                encrypted in transit and at rest. You can delete your account and all associated data at
+                                any time.</p>
+                        </div>
+                        <div class="fade-in-up" style="--delay: 0.3s;">
+                            <h3 class="font-semibold text-lg">Can this replace a doctor's visit?</h3>
+                            <p class="text-muted-foreground mt-1">No. CrySense is an informational tool designed to
+                                support parents and caregivers. It does not provide medical advice. Always consult a
+                                qualified healthcare professional for any health concerns regarding your baby.</p>
+                        </div>
+                        <div class="fade-in-up" style="--delay: 0.4s;">
+                            <h3 class="font-semibold text-lg">What devices are supported?</h3>
+                            <p class="text-muted-foreground mt-1">CrySense is available for modern iOS and Android
+                                devices. A stable internet connection is recommended for initial setup and cloud-based
+                                features, but the core on-device analysis can work offline.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Sign In Page -->
+        <div id="page-signin" class="page">
+            <section class="py-14">
+                <div class="max-w-md mx-auto px-4">
+                    <form id="signin-form" class="rounded-2xl border bg-background shadow-sm p-8 fade-in-up">
+                        <h2 class="text-2xl font-bold tracking-tight text-center">Welcome Back</h2>
+                        <p class="text-muted-foreground text-center mt-1">Sign in to your CrySense account.</p>
+                        <div id="signin-error" class="hidden mt-4 p-3 rounded-md bg-red-50 text-red-700 text-sm"></div>
+                        <div class="space-y-4 mt-6">
+                            <div>
+                                <label for="signin-email" class="text-sm font-medium">Email</label>
+                                <input id="signin-email" type="email" required
+                                    class="mt-1 flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                    placeholder="you@example.com">
+                            </div>
+                            <div>
+                                <label for="signin-password" class="text-sm font-medium">Password</label>
+                                <input id="signin-password" type="password" required
+                                    class="mt-1 flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm">
+                            </div>
+                            <button type="submit"
+                                class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 gap-2 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50">
+                                <span class="button-text">Sign In</span>
+                                <span class="loader hidden"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        <!-- Sign Up Page -->
+        <div id="page-signup" class="page">
+            <section class="py-14">
+                <div class="max-w-md mx-auto px-4">
+                    <form id="signup-form" class="rounded-2xl border bg-background shadow-sm p-8 fade-in-up">
+                        <h2 class="text-2xl font-bold tracking-tight text-center">Create an Account</h2>
+                        <p class="text-muted-foreground text-center mt-1">Start your journey with CrySense today.</p>
+                        <div id="signup-error" class="hidden mt-4 p-3 rounded-md bg-red-50 text-red-700 text-sm"></div>
+                        <div class="space-y-4 mt-6">
+                            <div>
+                                <label for="signup-email" class="text-sm font-medium">Email</label>
+                                <input id="signup-email" type="email" required
+                                    class="mt-1 flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                    placeholder="you@example.com">
+                            </div>
+                            <div>
+                                <label for="signup-password" class="text-sm font-medium">Password</label>
+                                <input id="signup-password" type="password" required
+                                    class="mt-1 flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                    placeholder="6+ characters">
+                            </div>
+                            <button type="submit"
+                                class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 gap-2 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50">
+                                <span class="button-text">Create Account</span>
+                                <span class="loader hidden"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        <!-- Parent App Page (Replaces Dashboard) -->
+        <div id="page-parent-app" class="page">
+            <section class="py-14">
+                <div class="max-w-6xl mx-auto px-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h1 class="text-3xl font-bold fade-in-up">Parent App</h1>
+                            <p id="welcome-message" class="text-muted-foreground fade-in-up" style="--delay: 0.1s;"></p>
+                        </div>
+                        <button
+                            class="open-demo-modal-btn inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 gap-2 bg-slate-900 text-white hover:bg-slate-800 fade-in-up"
+                            style="--delay: 0.2s;">
+                            <i data-lucide="mic" class="w-4 h-4"></i> Analyze New Cry
+                        </button>
+                    </div>
+
+                    <div class="mt-8 grid lg:grid-cols-3 gap-8">
+                        <!-- Left Column: Cry History -->
+                        <div class="lg:col-span-2 space-y-8">
+                            <div class="fade-in-up" style="--delay: 0.3s;">
+                                <h2 class="text-xl font-semibold tracking-tight">Cry History</h2>
+                                <div id="cry-history-container" class="mt-4 space-y-4">
+                                    <div id="history-loader" class="text-center p-8 border-2 border-dashed rounded-2xl">
+                                        <i data-lucide="loader"
+                                            class="w-8 h-8 mx-auto animate-spin text-muted-foreground"></i>
+                                        <p class="mt-2 text-muted-foreground">Loading your cry history...</p>
+                                    </div>
+                                    <div id="history-empty-state"
+                                        class="hidden text-center p-8 border-2 border-dashed rounded-2xl">
+                                        <i data-lucide="archive" class="w-8 h-8 mx-auto text-muted-foreground"></i>
+                                        <p class="mt-2 text-muted-foreground">No cry analyses recorded yet.</p>
+                                        <p class="text-sm text-muted-foreground">Click "Analyze New Cry" to get started.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Activity Log -->
+                        <div class="space-y-8">
+                            <div class="fade-in-up" style="--delay: 0.4s;">
+                                <h2 class="text-xl font-semibold tracking-tight">Daily Activity Log</h2>
+                                <div class="mt-4 p-4 rounded-2xl border bg-muted space-y-3">
+                                    <p class="text-sm text-muted-foreground text-center">Quickly log your baby's
+                                        activities.</p>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <button data-activity="Feed"
+                                            class="activity-btn flex flex-col items-center justify-center gap-1 p-2 rounded-lg hover:bg-gray-200 transition-colors">
+                                            <i data-lucide="milk" class="w-6 h-6"></i>
+                                            <span class="text-xs">Feed</span>
+                                        </button>
+                                        <button data-activity="Diaper"
+                                            class="activity-btn flex flex-col items-center justify-center gap-1 p-2 rounded-lg hover:bg-gray-200 transition-colors">
+                                            <i data-lucide="baby" class="w-6 h-6"></i>
+                                            <span class="text-xs">Diaper</span>
+                                        </button>
+                                        <button data-activity="Sleep"
+                                            class="activity-btn flex flex-col items-center justify-center gap-1 p-2 rounded-lg hover:bg-gray-200 transition-colors">
+                                            <i data-lucide="moon" class="w-6 h-6"></i>
+                                            <span class="text-xs">Sleep</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="activity-log-container" class="mt-4 space-y-3">
+                                    <div id="activity-loader" class="text-center py-4">
+                                        <i data-lucide="loader"
+                                            class="w-6 h-6 mx-auto animate-spin text-muted-foreground"></i>
+                                    </div>
+                                    <div id="activity-empty-state"
+                                        class="hidden text-center py-4 text-sm text-muted-foreground">
+                                        No activities logged today.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-10 border-t bg-muted">
+        <div class="max-w-6xl mx-auto px-4 grid md:grid-cols-4 gap-8 text-sm">
+            <div>
+                <div class="flex items-center gap-2 font-bold mb-2"><i data-lucide="baby" class="w-5 h-5"></i> CrySense
+                </div>
+                <p class="text-muted-foreground">AI-powered support for parents and pediatricians. Privacy-first. Built
+                    with care.</p>
+            </div>
+            <div>
+                <div class="font-medium mb-2">Product</div>
+                <ul class="space-y-2 text-muted-foreground">
+                    <li><a href="#" data-page="features" class="nav-link hover:underline">Features</a></li>
+                    <li><a href="#" data-page="screens" class="nav-link hover:underline">Pediatrician Advice</a></li>
+                    <li><a href="#" data-page="research" class="nav-link hover:underline">Research</a></li>
+                    <li><a href="#" data-page="faq" class="nav-link hover:underline">FAQ</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="font-medium mb-2">Company</div>
+                <ul class="space-y-2 text-muted-foreground">
+                    <li><a href="#" class="hover:underline">About</a></li>
+                    <li><a href="#" class="hover:underline">Careers</a></li>
+                    <li><a href="#" class="hover:underline">Contact</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="font-medium mb-2">Legal</div>
+                <ul class="space-y-2 text-muted-foreground">
+                    <li><a href="#" class="hover:underline">Privacy</a></li>
+                    <li><a href="#" class="hover:underline">Terms</a></li>
+                    <li><a href="#" class="hover:underline">HIPAA/GDPR</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Live Demo Modal & Chatbot -->
+    <div id="demo-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
+        <div class="fixed inset-0 bg-black/50 modal-overlay opacity-0" id="modal-backdrop"></div>
+        <div class="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md mx-4 sm:mx-auto transform scale-95 modal-content"
+            id="modal-box">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Live Cry Analysis</h3>
+                <button id="close-demo-modal" class="text-gray-400 hover:text-gray-600"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
+            </div>
+            <div id="demo-initial-state" class="text-center">
+                <p class="text-muted-foreground mb-4">This simulates a real 10-second audio recording and AI analysis.
+                </p>
+                <button id="start-analysis"
+                    class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-12 px-4 py-2 gap-2 bg-slate-900 text-white hover:bg-slate-800">
+                    <i data-lucide="mic" class="w-5 h-5"></i> Start Recording
+                </button>
+                <div class="my-4 flex items-center">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="flex-shrink mx-4 text-muted-foreground text-sm">OR</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+                <div>
+                    <label for="audio-upload"
+                        class="w-full cursor-pointer inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-12 px-4 py-2 gap-2 border-2 border-dashed hover:bg-gray-50 text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-colors">
+                        <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                        Upload an Audio File (.mp3, .wav)
+                    </label>
+                    <input type="file" id="audio-upload" class="hidden" accept="audio/*">
+                </div>
+            </div>
+            <div id="demo-recording-state" class="hidden text-center">
+                <div class="relative w-24 h-24 mx-auto flex items-center justify-center mic-animation">
+                    <div class="absolute inset-0 rounded-full bg-slate-100"></div>
+                    <svg class="absolute inset-0" viewBox="0 0 100 100">
+                        <circle id="timer-circle" class="text-slate-900" stroke="currentColor" stroke-width="4" cx="50"
+                            cy="50" r="48" fill="transparent" stroke-dasharray="301.59" stroke-dashoffset="301.59"
+                            transform="rotate(-90 50 50)" />
+                    </svg>
+                    <i data-lucide="mic" class="w-8 h-8 text-slate-700"></i>
+                </div>
+                <p class="text-muted-foreground mt-4">Recording... <span id="timer-text">10s</span></p>
+            </div>
+            <div id="demo-loading-state" class="hidden">
+                <div class="flex items-center justify-center flex-col">
+                    <i data-lucide="brain-circuit" class="w-12 h-12 text-slate-500 animate-pulse"></i>
+                    <p class="text-muted-foreground mt-2">Analyzing audio with AI...</p>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mt-4">
+                        <div id="progress-bar" class="bg-slate-900 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="demo-results-state" class="hidden space-y-4">
+                <div class="p-4 rounded-2xl border bg-background">
+                    <div class="text-xs text-muted-foreground">AI Suggested action</div>
+                    <div id="suggested-action" class="mt-1 text-sm min-h-[40px] flex items-center justify-center">
+                        <i data-lucide="loader" class="w-5 h-5 animate-spin"></i>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3" id="results-grid"></div>
+                <button id="analyze-again"
+                    class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border h-10 px-4 py-2 gap-2 hover:bg-gray-100"><i
+                        data-lucide="rotate-cw" class="w-4 h-4"></i> Analyze Another</button>
+            </div>
+        </div>
+    </div>
+    <button id="chatbot-toggle"
+        class="bg-slate-900 text-white rounded-full p-4 shadow-lg hover:bg-slate-800 transition-transform transform hover:scale-110"><i
+            data-lucide="message-circle" class="w-8 h-8"></i></button>
+    <div id="chatbot-container" class="bg-white rounded-2xl shadow-2xl flex flex-col">
+        <div class="p-4 border-b flex justify-between items-center bg-slate-900 text-white rounded-t-2xl">
+            <h3 class="font-semibold text-lg">CrySense Assistant</h3>
+            <button id="close-chatbot" class="text-white hover:text-gray-300"><i data-lucide="x"
+                    class="w-5 h-5"></i></button>
+        </div>
+        <div id="chat-window" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
+        <div class="p-2 border-t bg-muted/50">
+            <div id="chat-suggestions" class="flex gap-2 justify-center p-2 flex-wrap"></div>
+        </div>
+        <div class="p-4 border-t">
+            <form id="chat-form" class="flex items-center gap-2">
+                <input id="chat-input" type="text" placeholder="Ask a question..."
+                    class="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400">
+                <button type="submit"
+                    class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 w-10 bg-slate-900 text-white hover:bg-slate-800"><i
+                        data-lucide="send" class="w-5 h-5"></i></button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, Timestamp, setLogLevel, where, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyB9EkLcZG8yAsRUTgIGK-dW5N5csNbHgLY",
+            authDomain: "mycrysenseapp.firebaseapp.com",
+            projectId: "mycrysenseapp",
+            storageBucket: "mycrysenseapp.firebasestorage.app",
+            messagingSenderId: "570201051570",
+            appId: "1:570201051570:web:117430b5208e50dd30d4ab",
+            measurementId: "G-86MKRD75QY"
+        };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // --- Initialize Firebase ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        setLogLevel('debug');
+
+        let unsubscribeFromHistory = null;
+        let unsubscribeFromActivities = null;
+
+        // --- App State ---
+        let chatHistory = [];
+
+        // --- UI Elements ---
+        const pages = document.querySelectorAll('.page');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        const guestView = document.getElementById('guest-view');
+        const userView = document.getElementById('user-view');
+        const signOutBtn = document.getElementById('sign-out-btn');
+        const welcomeMessages = document.querySelectorAll('#welcome-message');
+        const signupForm = document.getElementById('signup-form');
+        const signinForm = document.getElementById('signin-form');
+        const signupError = document.getElementById('signup-error');
+        const signinError = document.getElementById('signin-error');
+
+        // --- Page Navigation & Animations ---
+        const showPage = (pageId, subTarget = null) => {
+            pages.forEach(page => page.classList.toggle('active', page.id === `page-${pageId}`));
+            window.scrollTo(0, 0);
+            const activePage = document.getElementById(`page-${pageId}`);
+            if (activePage) {
+                activePage.querySelectorAll('.fade-in-up').forEach(el => {
+                    el.classList.remove('is-visible');
+                    observer.observe(el);
+                });
+            }
+        };
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                let pageId = link.dataset.page;
+                showPage(pageId);
+            });
+        });
+        showPage('home');
+
+        // --- Authentication & Data Loading ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user && !user.isAnonymous) {
+                guestView.classList.add('hidden');
+                userView.classList.remove('hidden');
+                userView.classList.add('flex');
+                welcomeMessages.forEach(el => el.textContent = `Welcome back, ${user.email || 'User'}!`);
+
+                loadUserData(user.uid);
+
+                if (document.getElementById('page-signin').classList.contains('active') || document.getElementById('page-signup').classList.contains('active')) {
+                    showPage('parent-app');
+                }
+            } else {
+                guestView.classList.remove('hidden');
+                userView.classList.add('hidden');
+                userView.classList.remove('flex');
+
+                clearUserData();
+
+                if (document.getElementById('page-parent-app').classList.contains('active')) {
+                    showPage('home');
+                }
+                if (!auth.currentUser) {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token).catch(err => signInAnonymously(auth));
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                }
+            }
+        });
+
+        // Initial sign-in attempt
+        (async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Initial sign-in failed:", error);
+            }
+        })();
+
+
+        const toggleButtonSpinner = (form, isLoading) => {
+            const button = form.querySelector('button[type="submit"]');
+            const buttonText = button.querySelector('.button-text');
+            const loader = button.querySelector('.loader');
+            if (isLoading) {
+                button.disabled = true;
+                buttonText.classList.add('hidden');
+                loader.classList.remove('hidden');
+            } else {
+                button.disabled = false;
+                buttonText.classList.remove('hidden');
+                loader.classList.add('hidden');
+            }
+        };
+
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            toggleButtonSpinner(signupForm, true);
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            signupError.classList.add('hidden');
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                signupError.textContent = error.message;
+                signupError.classList.remove('hidden');
+            } finally {
+                toggleButtonSpinner(signupForm, false);
+            }
+        });
+
+        signinForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            toggleButtonSpinner(signinForm, true);
+            const email = document.getElementById('signin-email').value;
+            const password = document.getElementById('signin-password').value;
+            signinError.classList.add('hidden');
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                signinError.textContent = error.message;
+                signinError.classList.remove('hidden');
+            } finally {
+                toggleButtonSpinner(signinForm, false);
+            }
+        });
+
+        signOutBtn.addEventListener('click', async () => {
+            await signOut(auth);
+            showPage('home');
+        });
+
+        // --- Firestore Data Handling ---
+        const historyContainer = document.getElementById('cry-history-container');
+        const historyLoader = document.getElementById('history-loader');
+        const historyEmptyState = document.getElementById('history-empty-state');
+        const activityContainer = document.getElementById('activity-log-container');
+        const activityLoader = document.getElementById('activity-loader');
+        const activityEmptyState = document.getElementById('activity-empty-state');
+
+        // --- Sample Data ---
+        const sampleCryData = [
+            {
+                results: { Hunger: 58, Sleepy: 22, Discomfort: 15, Pain: 5 },
+                suggestion: "There's a good chance your baby is hungry. It might be time for a feed.",
+                timestamp: Timestamp.fromDate(new Date(Date.now() - 2 * 60 * 60 * 1000)) // 2 hours ago
+            },
+            {
+                results: { Hunger: 12, Sleepy: 65, Discomfort: 20, Pain: 3 },
+                suggestion: "Sleepiness seems to be the main factor here. A quiet room and some gentle rocking could help.",
+                timestamp: Timestamp.fromDate(new Date(Date.now() - 6 * 60 * 60 * 1000)) // 6 hours ago
+            }
+        ];
+
+        const sampleActivityData = [
+            { type: 'Feed', timestamp: Timestamp.fromDate(new Date(Date.now() - 2 * 60 * 60 * 1000)) },
+            { type: 'Diaper', timestamp: Timestamp.fromDate(new Date(Date.now() - 3 * 60 * 60 * 1000)) },
+            { type: 'Sleep', timestamp: Timestamp.fromDate(new Date(Date.now() - 4 * 60 * 60 * 1000)) }
+        ];
+
+        function loadUserData(userId) {
+            loadCryHistory(userId);
+            loadActivityLog(userId);
+        }
+
+        function clearUserData() {
+            if (unsubscribeFromHistory) unsubscribeFromHistory();
+            if (unsubscribeFromActivities) unsubscribeFromActivities();
+
+            historyContainer.querySelectorAll('.cry-history-card').forEach(el => el.remove());
+            historyLoader.classList.remove('hidden');
+            historyEmptyState.classList.add('hidden');
+
+            activityContainer.querySelectorAll('.activity-log-item').forEach(el => el.remove());
+            activityLoader.classList.remove('hidden');
+            activityEmptyState.classList.add('hidden');
+        }
+
+        function loadCryHistory(userId) {
+            if (unsubscribeFromHistory) unsubscribeFromHistory();
+            const criesRef = collection(db, 'artifacts', appId, 'users', userId, 'cries');
+            const q = query(criesRef, limit(10)); // Limit to recent 10 to be safe
+            unsubscribeFromHistory = onSnapshot(q, (snapshot) => {
+                historyLoader.classList.add('hidden');
+                historyContainer.querySelectorAll('.cry-history-card').forEach(el => el.remove());
+
+                if (snapshot.empty) {
+                    historyEmptyState.classList.add('hidden');
+                    renderCryHistory(sampleCryData, true); // Render sample data
+                } else {
+                    historyEmptyState.classList.add('hidden');
+                    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    docs.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+                    renderCryHistory(docs, false); // Render real data
+                }
+            }, (error) => {
+                console.error("Firebase Error: Could not fetch cry history.", error);
+                historyLoader.classList.add('hidden');
+                historyContainer.querySelectorAll('.cry-history-card').forEach(el => el.remove());
+                historyEmptyState.classList.remove('hidden');
+                historyEmptyState.innerHTML = `<i data-lucide="alert-circle" class="w-8 h-8 mx-auto text-red-500"></i><p class="mt-2 text-red-500">Could not load history.</p><p class="text-sm text-muted-foreground">Please check browser console for errors.</p>`;
+                lucide.createIcons();
+            });
+        }
+
+        function renderCryHistory(cries, isSample) {
+            cries.forEach(cry => {
+                const date = cry.timestamp.toDate();
+                const formattedDate = date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+                const topCry = Object.entries(cry.results).reduce((a, b) => a[1] > b[1] ? a : b);
+                const card = document.createElement('div');
+                card.className = `cry-history-card rounded-2xl border bg-background shadow-sm p-4 grid md:grid-cols-3 gap-4 items-center card-hover-effect ${isSample ? 'opacity-70' : ''}`;
+                card.innerHTML = `
+                    <div class="md:col-span-2">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <h3 class="font-semibold text-lg">Most Likely: <span class="text-slate-800">${topCry[0]} (${topCry[1]}%)</span></h3>
+                            <p class="text-sm text-muted-foreground">${formattedDate}</p>
+                        </div>
+                        <p class="text-sm text-muted-foreground mt-2">${cry.suggestion}</p>
+                         ${isSample ? '<p class="text-xs text-slate-400 mt-2">This is sample data. Your real analyses will appear here.</p>' : ''}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        ${Object.entries(cry.results).map(([name, value]) => `
+                            <div class="text-center">
+                                <div class="text-xs text-muted-foreground">${name}</div>
+                                <div class="font-bold">${value}%</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                historyContainer.appendChild(card);
+            });
+        }
+
+        function loadActivityLog(userId) {
+            if (unsubscribeFromActivities) unsubscribeFromActivities();
+            const activitiesRef = collection(db, 'artifacts', appId, 'users', userId, 'activities');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const q = query(activitiesRef, where("timestamp", ">=", Timestamp.fromDate(today)));
+            unsubscribeFromActivities = onSnapshot(q, (snapshot) => {
+                activityContainer.querySelectorAll('.activity-log-item').forEach(el => el.remove());
+                activityLoader.classList.add('hidden');
+
+                if (snapshot.empty) {
+                    activityEmptyState.classList.add('hidden');
+                    renderActivityLog(sampleActivityData, true);
+                } else {
+                    activityEmptyState.classList.add('hidden');
+                    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    docs.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+                    renderActivityLog(docs, false);
+                }
+            }, (error) => {
+                console.error("Firebase Error: Could not fetch activity log.", error);
+                activityLoader.classList.add('hidden');
+                activityContainer.querySelectorAll('.activity-log-item').forEach(el => el.remove());
+                activityEmptyState.classList.remove('hidden');
+                activityEmptyState.innerHTML = `<p class="text-red-500 text-center text-sm">Could not load activities.</p>`;
+            });
+        }
+
+        function renderActivityLog(activities, isSample) {
+            const iconMap = { Feed: 'milk', Diaper: 'baby', Sleep: 'moon' };
+            activities.forEach(activity => {
+                const time = activity.timestamp.toDate().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                const item = document.createElement('div');
+                item.className = `activity-log-item flex items-center justify-between bg-white p-2 rounded-lg border ${isSample ? 'opacity-60' : ''}`;
+                item.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="${iconMap[activity.type] || 'activity'}" class="w-5 h-5 text-slate-600"></i>
+                        <span class="font-medium text-sm">${activity.type}</span>
+                    </div>
+                    <span class="text-xs text-muted-foreground">${time}</span>
+                `;
+                activityContainer.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        document.querySelectorAll('.activity-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const activityType = btn.dataset.activity;
+                if (!auth.currentUser || auth.currentUser.isAnonymous) {
+                    console.log("Please sign in to log activities.");
+                    return;
+                }
+                try {
+                    const userId = auth.currentUser.uid;
+                    await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'activities'), {
+                        type: activityType,
+                        timestamp: Timestamp.now()
+                    });
+                } catch (error) {
+                    console.error("Error logging activity: ", error);
+                }
+            });
+        });
+
+        async function saveCryAnalysis(analysisData) {
+            if (!auth.currentUser || auth.currentUser.isAnonymous) {
+                console.log("Anonymous or unauthenticated user. Not saving analysis.");
+                return;
+            }
+            try {
+                const userId = auth.currentUser.uid;
+                const docData = { ...analysisData, timestamp: Timestamp.now(), userId: userId };
+                await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'cries'), docData);
+            } catch (error) {
+                console.error("Error saving cry analysis to Firestore: ", error);
+            }
+        }
+
+        // --- Live Demo Modal Logic ---
+        const demoModal = document.getElementById('demo-modal');
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        const modalBox = document.getElementById('modal-box');
+        const openDemoModalBtn = document.getElementById('open-demo-modal');
+        const otherOpenDemoBtns = document.querySelectorAll('.open-demo-modal-btn');
+        const closeDemoModalBtn = document.getElementById('close-demo-modal');
+        const startAnalysisBtn = document.getElementById('start-analysis');
+        const analyzeAgainBtn = document.getElementById('analyze-again');
+        const audioUploadInput = document.getElementById('audio-upload');
+        const states = { initial: document.getElementById('demo-initial-state'), recording: document.getElementById('demo-recording-state'), loading: document.getElementById('demo-loading-state'), results: document.getElementById('demo-results-state') };
+        let timerInterval;
+
+        const showModalState = (stateName) => {
+            Object.values(states).forEach(s => s.classList.add('hidden'));
+            if (states[stateName]) states[stateName].classList.remove('hidden');
+        };
+
+        const openModal = () => {
+            demoModal.classList.remove('hidden');
+            demoModal.classList.add('flex');
+            setTimeout(() => {
+                modalBackdrop.classList.remove('opacity-0');
+                modalBox.classList.remove('scale-95');
+            }, 10);
+            showModalState('initial');
+        };
+
+        const closeModal = () => {
+            modalBackdrop.classList.add('opacity-0');
+            modalBox.classList.add('scale-95');
+            clearInterval(timerInterval);
+            setTimeout(() => {
+                demoModal.classList.add('hidden');
+                demoModal.classList.remove('flex');
+            }, 300);
+        };
+
+        openDemoModalBtn.addEventListener('click', openModal);
+        otherOpenDemoBtns.forEach(btn => btn.addEventListener('click', openModal));
+        closeDemoModalBtn.addEventListener('click', closeModal);
+        modalBackdrop.addEventListener('click', closeModal);
+        analyzeAgainBtn.addEventListener('click', () => showModalState('initial'));
+
+        startAnalysisBtn.addEventListener('click', () => {
+            showModalState('recording');
+            let timeLeft = 10;
+            const timerText = document.getElementById('timer-text');
+            const timerCircle = document.getElementById('timer-circle');
+            const circumference = 2 * Math.PI * 48;
+            timerCircle.style.strokeDashoffset = circumference;
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerText.textContent = `${timeLeft}s`;
+                const offset = circumference - (timeLeft / 10) * circumference;
+                timerCircle.style.strokeDashoffset = offset;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    runAnalysis();
+                }
+            }, 1000);
+        });
+
+        audioUploadInput.addEventListener('change', (event) => {
+            if (event.target.files && event.target.files[0]) {
+                const file = event.target.files[0];
+                console.log(`File selected: ${file.name}`);
+                runAnalysis();
+            }
+        });
+
+        const runAnalysis = () => {
+            showModalState('loading');
+            const progressBar = document.getElementById('progress-bar');
+            let progress = 0;
+            const analysisInterval = setInterval(() => {
+                progress += 10;
+                progressBar.style.width = `${progress}%`;
+                if (progress >= 100) {
+                    clearInterval(analysisInterval);
+                    setTimeout(showResults, 500);
+                }
+            }, 200);
+        };
+
+        const getAISuggestion = async (results) => {
+            const topCry = Object.entries(results).reduce((a, b) => a[1] > b[1] ? a : b);
+            const prompt = `My baby is crying. An AI analysis suggests the most likely reason is ${topCry[0]} with ${topCry[1]}% confidence. The other possibilities are ${Object.entries(results).filter(r => r[0] !== topCry[0]).map(r => `${r[0]} (${r[1]}%)`).join(', ')}. Provide a short, actionable, and empathetic suggestion for the parent in 1-2 sentences. Do not use markdown.`;
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const apiKey = "AIzaSyBfo5XqFONj1U-MM6ydOLts0zFLM0mG1dE";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+                const result = await response.json();
+                return result.candidates[0].content.parts[0].text;
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                return `It looks like your baby might be ${topCry[0].toLowerCase()}. Consider checking if they need to be fed, changed, or comforted.`;
+            }
+        };
+
+        const showResults = async () => {
+            showModalState('results');
+            const resultsGrid = document.getElementById('results-grid');
+            const suggestedActionEl = document.getElementById('suggested-action');
+            resultsGrid.innerHTML = '';
+            suggestedActionEl.innerHTML = `<i data-lucide="loader" class="w-5 h-5 animate-spin"></i>`;
+            lucide.createIcons();
+
+            const hungerPercent = Math.floor(Math.random() * 11) + 50;
+            let remainder = 100 - hungerPercent;
+            let otherValues = Array.from({ length: 3 }, () => Math.random());
+            const totalOther = otherValues.reduce((sum, val) => sum + val, 0);
+            let otherPercentages = otherValues.map(val => Math.floor((val / totalOther) * remainder));
+            let otherTotal = otherPercentages.reduce((sum, val) => sum + val, 0);
+            let adjustment = remainder - otherTotal;
+            while (adjustment > 0) {
+                let randomIndex = Math.floor(Math.random() * otherPercentages.length);
+                otherPercentages[randomIndex]++;
+                adjustment--;
+            }
+
+            const cryData = {
+                Hunger: hungerPercent,
+                Sleepy: otherPercentages[0],
+                Discomfort: otherPercentages[1],
+                Pain: otherPercentages[2]
+            };
+
+            const topCryName = 'Hunger';
+
+            Object.entries(cryData).forEach(([name, value]) => {
+                const resultItem = document.createElement('div');
+                const isTopCry = name === topCryName;
+                let classes = 'p-3 rounded-2xl border transition-all duration-300 transform';
+                if (isTopCry) {
+                    classes += ' bg-green-600 text-white ring-2 ring-green-600 ring-offset-2 scale-105';
+                } else {
+                    classes += ' bg-background';
+                }
+                resultItem.className = classes;
+                const textColorClass = isTopCry ? 'text-green-200' : 'text-muted-foreground';
+                const headingColorClass = isTopCry ? 'text-white' : 'font-bold';
+                const progressBgClass = isTopCry ? 'bg-green-800' : 'bg-gray-200';
+                const progressBarClass = isTopCry ? 'bg-white' : 'bg-slate-900';
+                resultItem.innerHTML = `
+                    <div class="text-xs ${textColorClass}">${name}</div>
+                    <div class="text-2xl ${headingColorClass} mt-1">${value}%</div>
+                    <div class="relative h-2 mt-2 w-full overflow-hidden rounded-full ${progressBgClass}">
+                        <div class="h-full w-full flex-1 ${progressBarClass} transition-all" style="transform: translateX(-${100 - value}%);"></div>
+                    </div>
+                `;
+                resultsGrid.appendChild(resultItem);
+            });
+
+            const suggestion = await getAISuggestion(cryData);
+            suggestedActionEl.textContent = suggestion;
+            const analysisData = { results: cryData, suggestion: suggestion };
+            await saveCryAnalysis(analysisData);
+        };
+
+        // --- Chatbot ---
+        const chatbotToggle = document.getElementById('chatbot-toggle');
+        const chatbotContainer = document.getElementById('chatbot-container');
+        const closeChatbotBtn = document.getElementById('close-chatbot');
+        const chatWindow = document.getElementById('chat-window');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatSuggestions = document.getElementById('chat-suggestions');
+
+        const toggleChatbot = () => chatbotContainer.classList.toggle('active');
+        chatbotToggle.addEventListener('click', toggleChatbot);
+        closeChatbotBtn.addEventListener('click', toggleChatbot);
+
+        const addMessage = (message, sender) => {
+            const typingIndicator = chatWindow.querySelector('.typing-indicator');
+            if (typingIndicator) typingIndicator.remove();
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', 'p-3', 'rounded-lg', 'max-w-xs', 'text-sm', 'w-fit');
+            messageElement.innerHTML = message.replace(/\n/g, '<br>');
+            if (sender === 'user') {
+                messageElement.classList.add('bg-slate-900', 'text-white', 'self-end', 'ml-auto');
+            } else {
+                messageElement.classList.add('bg-muted', 'self-start', 'mr-auto');
+            }
+            chatWindow.appendChild(messageElement);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        };
+
+        const addTypingIndicator = () => {
+            const typingElement = document.createElement('div');
+            typingElement.classList.add('typing-indicator', 'p-3', 'rounded-lg', 'bg-muted', 'self-start', 'mr-auto', 'flex', 'items-center', 'gap-1');
+            typingElement.innerHTML = `<span class="h-2 w-2 bg-slate-400 rounded-full"></span><span class="h-2 w-2 bg-slate-400 rounded-full"></span><span class="h-2 w-2 bg-slate-400 rounded-full"></span>`;
+            chatWindow.appendChild(typingElement);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        };
+
+        const getGeminiResponse = async (prompt) => {
+            addTypingIndicator();
+
+            const systemInstruction = `
+                You are CrySense Assistant, a specialized AI helper for the CrySense web app. Your primary goal is to provide accurate, empathetic, and safe information to parents and caregivers.
+                **Persona:** Empathetic, Reassuring, Knowledgeable, Clear, Safe & Responsible.
+                **Core Knowledge:** You are an expert on the CrySense app (AI cry analysis, data logging, pediatrician advice feature).
+                **VERY IMPORTANT RULE:** NEVER provide medical advice. If asked for medical help, you MUST state your limitation and direct the user to a professional.
+            `;
+
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+            const payload = { contents: [{ role: "model", parts: [{ text: systemInstruction }] }, ...chatHistory] };
+            const apiKey = "AIzaSyBfo5XqFONj1U-MM6ydOLts0zFLM0mG1dE";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+                const result = await response.json();
+                const text = result.candidates[0].content.parts[0].text;
+                chatHistory.push({ role: "model", parts: [{ text: text }] });
+                addMessage(text, 'bot');
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                addMessage("Sorry, I'm having trouble connecting right now. Please try again later.", 'bot');
+            }
+        };
+
+        const handleChatSubmit = (prompt) => {
+            if (prompt) {
+                addMessage(prompt, 'user');
+                chatInput.value = '';
+                getGeminiResponse(prompt);
+            }
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleChatSubmit(chatInput.value.trim());
+        });
+
+        const suggestions = ["What is CrySense?", "How accurate is it?", "Is my data safe?"];
+        suggestions.forEach(s => {
+            const btn = document.createElement('button');
+            btn.textContent = s;
+            btn.className = "text-xs bg-white border rounded-full px-3 py-1 hover:bg-slate-100 transition-colors";
+            btn.onclick = () => handleChatSubmit(s);
+            chatSuggestions.appendChild(btn);
+        });
+
+        // Initial bot message
+        setTimeout(() => {
+            const welcomeText = 'Welcome to CrySense! How can I help you understand our features or how the app works?';
+            addMessage(welcomeText, 'bot');
+            chatHistory.push({ role: "model", parts: [{ text: welcomeText }] });
+        }, 1000);
+
+        // --- Charts Initialization ---
+        const initCharts = () => {
+            const nightlyCtx = document.getElementById('nightlyCryingChart')?.getContext('2d');
+            if (nightlyCtx) {
+                new Chart(nightlyCtx, { type: 'bar', data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], datasets: [{ label: 'Crying Events', data: [3, 5, 2, 4, 6, 3, 2], backgroundColor: '#0f172a', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, display: false }, x: { display: false } } } });
+            }
+            const distCtx = document.getElementById('cryDistributionChart')?.getContext('2d');
+            if (distCtx) {
+                new Chart(distCtx, { type: 'doughnut', data: { labels: ['Hunger', 'Sleepy', 'Discomfort', 'Pain'], datasets: [{ label: 'Cry Distribution', data: [62, 18, 12, 8], backgroundColor: ['#0f172a', '#334155', '#64748b', '#94a3b8'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 20 } } } } });
+            }
+        };
+
+        // --- Final Initializations ---
+        lucide.createIcons();
+        initCharts();
+
+    </script>
+</body>
+
+</html>

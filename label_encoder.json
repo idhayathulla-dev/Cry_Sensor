@@ -1,0 +1,16 @@
+{
+  "classes": [
+    "belly_pain",
+    "burping",
+    "discomfort",
+    "hungry",
+    "tired"
+  ],
+  "class_to_idx": {
+    "belly_pain": 0,
+    "burping": 1,
+    "discomfort": 2,
+    "hungry": 3,
+    "tired": 4
+  }
+}

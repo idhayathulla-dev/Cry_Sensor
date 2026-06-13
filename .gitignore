@@ -1,0 +1,20 @@
+# Model weight binaries (too large for GitHub)
+best_model.pth
+
+# Python cache and temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+*.bak
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Local configuration / secrets
+.env
+local_settings.py
+
+# Datasets
+donateacry-corpus-master/

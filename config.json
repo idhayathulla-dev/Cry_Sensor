@@ -1,0 +1,31 @@
+{
+  "model_type": "audio-classification",
+  "task": "audio-classification",
+  "architectures": ["HuBERTClassifier"],
+  "labels": {
+    "0": "hungry",
+    "1": "tired", 
+    "2": "belly_pain",
+    "3": "burping",
+    "4": "discomfort"
+  },
+  "id2label": {
+    "0": "hungry",
+    "1": "tired",
+    "2": "belly_pain", 
+    "3": "burping",
+    "4": "discomfort"
+  },
+  "label2id": {
+    "hungry": 0,
+    "tired": 1,
+    "belly_pain": 2,
+    "burping": 3,
+    "discomfort": 4
+  },
+  "sample_rate": 16000,
+  "num_labels": 5,
+  "hidden_size": 768,
+  "freeze_encoder": true,
+  "hubert_model_name": "facebook/hubert-base-ls960"
+}

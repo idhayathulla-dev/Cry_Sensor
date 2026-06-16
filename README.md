@@ -1,5 +1,4 @@
 ---
-license: mit
 tags:
 - audio-classification
 - baby-cry-detection
@@ -50,6 +49,3 @@ print(result)
 
 ## Training
 Trained on custom baby cry dataset with data augmentation.
-
-## License
-MIT License - Free for commercial and personal use
